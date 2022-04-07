@@ -8,6 +8,7 @@ use Shopware\Core\Content\Product\AbstractProductVariationBuilder;
 use Shopware\Core\Content\Product\AbstractPropertyGroupSorter;
 use Shopware\Core\Content\Product\AbstractSalesChannelProductBuilder;
 use Shopware\Core\Content\Product\DataAbstractionLayer\CheapestPrice\CheapestPriceContainer;
+use Shopware\Core\Content\Product\ProductCollection;
 use Shopware\Core\Content\Product\ProductEntity;
 use Shopware\Core\Content\Product\ProductEvents;
 use Shopware\Core\Content\Product\SalesChannel\Price\AbstractProductPriceCalculator;
@@ -94,6 +95,8 @@ class ProductSubscriber implements EventSubscriberInterface
      */
     private function entityLoaded(array $collection, Context $context): void
     {
+        $products = new ProductCollection($collection);
+
         /** @var ProductEntity $product */
         foreach ($collection as $product) {
             // CheapestPrice will only be added to SalesChannelProductEntities in the Future
@@ -110,6 +113,17 @@ class ProductSubscriber implements EventSubscriberInterface
             }
 
             $this->productVariationBuilder->build($product);
+
+            if ($product->getParentId() === null || $product->getName() !== null) {
+                continue;
+            }
+
+            $parentProduct = $products->get($product->getParentId());
+            if (!$parentProduct instanceof ProductEntity) {
+                continue;
+            }
+
+            $product->setName($parentProduct->getName());
         }
     }
 
